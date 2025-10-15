@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   openspeech:
-    build: .
+    image: ghcr.io/binuengoor/openspeech:latest
     container_name: openspeech
     ports:
       - "3000:3000"
