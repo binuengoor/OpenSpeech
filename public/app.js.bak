@@ -1,0 +1,356 @@
+// Application state
+let currentSettings = null;
+let availableVoices = [];
+let currentAudioBlob = null;
+
+// DOM Elements
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const closeModal = document.querySelector('.close');
+const serviceTypeSelect = document.getElementById('serviceType');
+const customEndpointGroup = document.getElementById('customEndpointGroup');
+const customEndpointInput = document.getElementById('customEndpoint');
+const apiKeyInput = document.getElementById('apiKey');
+const saveSettingsBtn = document.getElementById('saveSettings');
+const testConnectionBtn = document.getElementById('testConnection');
+const settingsStatus = document.getElementById('settingsStatus');
+const voiceSelect = document.getElementById('voiceSelect');
+const languageFilter = document.getElementById('languageFilter');
+const speedSlider = document.getElementById('speedSlider');
+const speedValue = document.getElementById('speedValue');
+const formatSelect = document.getElementById('formatSelect');
+const combineAudioCheckbox = document.getElementById('combineAudio');
+const textInput = document.getElementById('textInput');
+const charCount = document.getElementById('charCount');
+const chunkInfo = document.getElementById('chunkInfo');
+const generateBtn = document.getElementById('generateBtn');
+const progressInfo = document.getElementById('progressInfo');
+const progressText = document.getElementById('progressText');
+const audioPlayerPanel = document.getElementById('audioPlayerPanel');
+const audioPlayer = document.getElementById('audioPlayer');
+const downloadBtn = document.getElementById('downloadBtn');
+const audioInfo = document.getElementById('audioInfo');
+const errorPanel = document.getElementById('errorPanel');
+const errorMessage = document.getElementById('errorMessage');
+
+// Initialize app
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadSettings();
+    setupEventListeners();
+    
+    if (currentSettings && currentSettings.apiKey) {
+        await loadVoices();
+    }
+});
+
+// Event Listeners
+function setupEventListeners() {
+    settingsBtn.onclick = () => settingsModal.style.display = 'block';
+    closeModal.onclick = () => settingsModal.style.display = 'none';
+    window.onclick = (e) => {
+        if (e.target === settingsModal) {
+            settingsModal.style.display = 'none';
+        }
+    };
+
+    serviceTypeSelect.onchange = () => {
+        customEndpointGroup.style.display = 
+            serviceTypeSelect.value === 'custom' ? 'block' : 'none';
+    };
+
+    saveSettingsBtn.onclick = saveSettings;
+    testConnectionBtn.onclick = testConnection;
+    generateBtn.onclick = generateSpeech;
+    downloadBtn.onclick = downloadAudio;
+
+    speedSlider.oninput = () => {
+        speedValue.textContent = `${parseFloat(speedSlider.value).toFixed(2)}x`;
+    };
+
+    languageFilter.onchange = filterVoicesByLanguage;
+
+    textInput.oninput = updateTextStats;
+}
+
+// Load settings from server
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/settings');
+        currentSettings = await response.json();
+        
+        // Populate form
+        serviceTypeSelect.value = currentSettings.serviceType || 'openai';
+        customEndpointInput.value = currentSettings.customEndpoint || '';
+        apiKeyInput.value = currentSettings.apiKey || '';
+        
+        customEndpointGroup.style.display = 
+            currentSettings.serviceType === 'custom' ? 'block' : 'none';
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showStatus(settingsStatus, 'Error loading settings', 'error');
+    }
+}
+
+// Save settings to server
+async function saveSettings() {
+    const settings = {
+        serviceType: serviceTypeSelect.value,
+        customEndpoint: customEndpointInput.value,
+        apiKey: apiKeyInput.value
+    };
+
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            currentSettings = settings;
+            showStatus(settingsStatus, 'Settings saved successfully!', 'success');
+            await loadVoices();
+            
+            setTimeout(() => {
+                settingsModal.style.display = 'none';
+            }, 1500);
+        } else {
+            showStatus(settingsStatus, 'Failed to save settings', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showStatus(settingsStatus, 'Error saving settings', 'error');
+    }
+}
+
+// Test connection to TTS service
+async function testConnection() {
+    if (!apiKeyInput.value) {
+        showStatus(settingsStatus, 'Please enter an API key', 'error');
+        return;
+    }
+
+    showStatus(settingsStatus, 'Testing connection...', 'info');
+
+    try {
+        const endpoint = serviceTypeSelect.value === 'custom' 
+            ? customEndpointInput.value 
+            : 'openai';
+
+        const response = await fetch('/api/tts/voices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                endpoint: endpoint,
+                apiKey: apiKeyInput.value
+            })
+        });
+
+        if (response.ok) {
+            const voices = await response.json();
+            showStatus(settingsStatus, `Connection successful! Found ${voices.length} voices.`, 'success');
+        } else {
+            showStatus(settingsStatus, 'Connection failed. Check your settings.', 'error');
+        }
+    } catch (error) {
+        console.error('Connection test error:', error);
+        showStatus(settingsStatus, 'Connection test failed', 'error');
+    }
+}
+
+// Load available voices
+async function loadVoices() {
+    if (!currentSettings || !currentSettings.apiKey) {
+        voiceSelect.innerHTML = '<option value="">Configure settings first</option>';
+        return;
+    }
+
+    try {
+        const endpoint = currentSettings.serviceType === 'custom' 
+            ? currentSettings.customEndpoint 
+            : 'openai';
+
+        const response = await fetch('/api/tts/voices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                endpoint: endpoint,
+                apiKey: currentSettings.apiKey
+            })
+        });
+
+        if (response.ok) {
+            availableVoices = await response.json();
+            populateVoiceDropdown();
+            populateLanguageFilter();
+        } else {
+            voiceSelect.innerHTML = '<option value="">Error loading voices</option>';
+        }
+    } catch (error) {
+        console.error('Error loading voices:', error);
+        voiceSelect.innerHTML = '<option value="">Error loading voices</option>';
+    }
+}
+
+// Populate voice dropdown
+function populateVoiceDropdown(filterLanguage = '') {
+    const filteredVoices = filterLanguage 
+        ? availableVoices.filter(v => v.language === filterLanguage)
+        : availableVoices;
+
+    voiceSelect.innerHTML = filteredVoices.map(voice => 
+        `<option value="${voice.name}">${voice.name} (${voice.language || 'Unknown'})</option>`
+    ).join('');
+
+    if (filteredVoices.length === 0) {
+        voiceSelect.innerHTML = '<option value="">No voices available</option>';
+    }
+}
+
+// Populate language filter
+function populateLanguageFilter() {
+    const languages = [...new Set(availableVoices.map(v => v.language).filter(Boolean))];
+    languages.sort();
+
+    languageFilter.innerHTML = '<option value="">All Languages</option>' +
+        languages.map(lang => `<option value="${lang}">${lang}</option>`).join('');
+}
+
+// Filter voices by language
+function filterVoicesByLanguage() {
+    populateVoiceDropdown(languageFilter.value);
+}
+
+// Update text statistics
+function updateTextStats() {
+    const text = textInput.value;
+    const length = text.length;
+    charCount.textContent = `${length} characters`;
+
+    if (length > 4096) {
+        const numChunks = Math.ceil(length / 4096);
+        chunkInfo.textContent = `(Will be split into ~${numChunks} chunks)`;
+        chunkInfo.style.color = '#ff9800';
+    } else {
+        chunkInfo.textContent = '';
+    }
+}
+
+// Generate speech
+async function generateSpeech() {
+    const text = textInput.value.trim();
+    
+    if (!text) {
+        showError('Please enter some text to convert to speech');
+        return;
+    }
+
+    if (!currentSettings || !currentSettings.apiKey) {
+        showError('Please configure your settings first');
+        settingsModal.style.display = 'block';
+        return;
+    }
+
+    if (!voiceSelect.value) {
+        showError('Please select a voice');
+        return;
+    }
+
+    hideError();
+    audioPlayerPanel.style.display = 'none';
+    generateBtn.disabled = true;
+    progressInfo.style.display = 'flex';
+    progressText.textContent = 'Generating speech...';
+
+    try {
+        const response = await fetch('/api/tts/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: text,
+                settings: currentSettings,
+                voice: voiceSelect.value,
+                speed: parseFloat(speedSlider.value),
+                format: formatSelect.value,
+                combineAudio: combineAudioCheckbox.checked
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Generation failed');
+        }
+
+        const result = await response.json();
+        
+        if (result.success) {
+            progressText.textContent = 'Loading audio...';
+            
+            // Convert base64 to blob
+            const audioData = atob(result.audioData);
+            const audioArray = new Uint8Array(audioData.length);
+            for (let i = 0; i < audioData.length; i++) {
+                audioArray[i] = audioData.charCodeAt(i);
+            }
+            
+            const mimeType = `audio/${result.format}`;
+            currentAudioBlob = new Blob([audioArray], { type: mimeType });
+            
+            // Create object URL and play
+            const audioUrl = URL.createObjectURL(currentAudioBlob);
+            audioPlayer.src = audioUrl;
+            
+            // Show player
+            audioPlayerPanel.style.display = 'block';
+            audioInfo.textContent = result.combined 
+                ? `Combined ${result.chunks} audio chunks into one file`
+                : `Generated from ${result.chunks} chunk(s)`;
+            
+            progressText.textContent = 'Complete!';
+            setTimeout(() => {
+                progressInfo.style.display = 'none';
+            }, 1000);
+        }
+    } catch (error) {
+        console.error('Error generating speech:', error);
+        showError(error.message);
+        progressInfo.style.display = 'none';
+    } finally {
+        generateBtn.disabled = false;
+    }
+}
+
+// Download audio
+function downloadAudio() {
+    if (!currentAudioBlob) return;
+
+    const url = URL.createObjectURL(currentAudioBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `openspeech_${Date.now()}.${formatSelect.value}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Show status message
+function showStatus(element, message, type) {
+    element.textContent = message;
+    element.className = `status-message ${type}`;
+    element.style.display = 'block';
+}
+
+// Show error
+function showError(message) {
+    errorMessage.textContent = message;
+    errorPanel.style.display = 'block';
+    errorPanel.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Hide error
+function hideError() {
+    errorPanel.style.display = 'none';
+}

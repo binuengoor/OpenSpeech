@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  openspeech:
+    build: .
+    container_name: openspeech
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persist settings
+      - ./data:/app/data
+      # Persist generated audio files
+      - ./output:/app/output
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped

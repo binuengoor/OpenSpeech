@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenSpeech - Text to Speech</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Mobile Sidebar Toggle (visible on mobile only) -->
+    <button id="mobileSidebarToggle" class="mobile-sidebar-toggle" title="Toggle Sidebar">☰</button>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <button id="sidebarToggle" class="sidebar-toggle" title="Toggle Sidebar">☰</button>
+            <span class="sidebar-title">Controls</span>
+        </div>
+        
+        <div class="sidebar-content">
+            <!-- Favorite Voices -->
+            <div class="sidebar-section" id="favoritesSection" style="display: none;">
+                <div class="favorites-header">
+                    <h3>⭐ Favorites <span id="favoritesCount">(0)</span></h3>
+                    <button id="toggleFavorites" class="btn-icon" title="Toggle favorites">▼</button>
+                </div>
+                <div id="favoritesList" class="favorites-list"></div>
+            </div>
+
+            <!-- Voice Configuration -->
+            <div class="sidebar-section">
+                <h3>🎤 Voice</h3>
+                
+                <div class="form-group">
+                    <label for="modelSelect">Model:</label>
+                    <select id="modelSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="languageFilter">Language:</label>
+                    <select id="languageFilter">
+                        <option value="">All Languages</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="genderFilter">Gender:</label>
+                    <select id="genderFilter">
+                        <option value="">All Genders</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="voiceSelect">Voice:</label>
+                    <div class="voice-select-wrapper">
+                        <select id="voiceSelect">
+                            <option value="">Select voice...</option>
+                        </select>
+                        <button id="favoriteBtn" class="btn-icon" title="Add to favorites" style="display: none;">☆</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="speedSlider">Speed: <span id="speedValue">1.0x</span></label>
+                    <input type="range" id="speedSlider" min="0.25" max="4.0" step="0.05" value="1.0">
+                </div>
+
+                <div class="form-group">
+                    <label for="formatSelect">Format:</label>
+                    <select id="formatSelect">
+                        <option value="mp3">MP3</option>
+                        <option value="opus">Opus</option>
+                        <option value="aac">AAC</option>
+                        <option value="flac">FLAC</option>
+                    </select>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="combineAudio" checked>
+                        Combine audio
+                    </label>
+                </div>
+            </div>
+
+            <!-- Log Viewer -->
+            <div class="sidebar-section log-viewer-section">
+                <h3>Logs</h3>
+                <div class="log-viewer" id="logViewer">
+                    <div class="log-message info">Connecting to log stream...</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <button id="settingsBtn" class="sidebar-btn" title="Settings">
+                <span class="icon">⚙️</span>
+                <span class="label">Settings</span>
+            </button>
+            <button id="themeToggle" class="sidebar-btn" title="Toggle Theme">
+                <span class="icon">🌓</span>
+                <span class="label">Theme</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header>
+            <h1>🔊 OpenSpeech</h1>
+            <p class="subtitle">Text-to-Speech Service</p>
+        </header>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <h3>TTS Service</h3>
+                    
+                    <div class="form-group">
+                        <label for="serviceType">Service Type:</label>
+                        <select id="serviceType">
+                            <option value="openai">Official OpenAI</option>
+                            <option value="custom">OpenAI-Compatible Endpoint</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="customEndpointGroup" style="display: none;">
+                        <label for="customEndpoint">Custom Endpoint URL:</label>
+                        <div class="input-with-status">
+                            <input type="text" id="customEndpoint" placeholder="http://localhost:8080">
+                            <span id="endpointLock" class="lock-icon" style="display: none;">🔒</span>
+                        </div>
+                        <small id="endpointHint">Enter the base URL of your OpenAI-compatible TTS service</small>
+                        <button id="resetEndpoint" class="btn-reset" style="display: none;">Reset to Default</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="apiKey">API Key:</label>
+                        <div class="input-with-status">
+                            <input type="password" id="apiKey" placeholder="sk-...">
+                            <button id="toggleApiKey" class="btn-toggle">👁️</button>
+                        </div>
+                        <small>Your API key for the selected service</small>
+                    </div>
+
+                    <div class="form-group">
+                        <button id="testConnection" class="btn btn-secondary" style="width: 100%;">Test Connection</button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button id="saveSettings" class="btn btn-primary">Save Settings</button>
+                        <div id="settingsStatus" class="status-message" style="margin-top: 10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <main>
+            <div class="text-input-panel">
+                <div class="text-input-header">
+                    <h3>📝 Content Input</h3>
+                </div>
+                
+                <!-- Drag and Drop Upload Zone -->
+                <div id="dropZone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <div class="drop-zone-icon">📄</div>
+                        <p class="drop-zone-text">Drag & drop a file here or <span class="drop-zone-link">browse</span></p>
+                        <p class="drop-zone-formats">Supported: TXT, HTML, DOCX, PDF</p>
+                    </div>
+                    <input type="file" id="fileUpload" accept=".txt,.html,.htm,.docx,.pdf" style="display: none;">
+                </div>
+                
+                <textarea id="textInput" placeholder="Enter or paste your text here...&#10;&#10;The application will automatically split long text into chunks at sentence boundaries (4096 character limit per chunk)."></textarea>
+                <div class="text-info">
+                    <span id="charCount">0 characters</span>
+                    <span id="chunkInfo"></span>
+                </div>
+            </div>
+
+            <div class="action-panel">
+                <button id="generateBtn" class="btn btn-primary btn-large">Generate Speech</button>
+                <div id="progressInfo" class="progress-info" style="display: none;">
+                    <div class="spinner"></div>
+                    <span id="progressText">Processing...</span>
+                </div>
+            </div>
+
+            <div id="audioPlayerPanel" class="audio-panel" style="display: none;">
+                <h3>Generated Audio</h3>
+                <audio id="audioPlayer" controls></audio>
+                <div class="playback-controls">
+                    <label for="playbackSpeed">Playback Speed:</label>
+                    <input type="range" id="playbackSpeed" min="0.5" max="2" step="0.25" value="1">
+                    <span id="playbackSpeedValue">1.0x</span>
+                </div>
+                <div class="audio-actions">
+                    <button id="downloadBtn" class="btn btn-secondary">Download Audio</button>
+                    <span id="audioInfo"></span>
+                </div>
+            </div>
+
+            <div id="errorPanel" class="error-panel" style="display: none;">
+                <h3>⚠️ Error</h3>
+                <p id="errorMessage"></p>
+            </div>
+
+            <!-- Output Manager -->
+            <div id="filesPanel" class="files-panel" style="display: none;">
+                <div class="files-header">
+                    <h3>📁 Output Manager</h3>
+                    <div class="files-header-actions">
+                        <span id="folderSize" class="folder-size">0 MB</span>
+                        <button id="clearAllFiles" class="btn-clear-all">Clear All</button>
+                    </div>
+                </div>
+                <div id="filesList" class="files-list">
+                    <!-- Files and processing jobs will be shown here -->
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>OpenSpeech v1.0 | Supports OpenAI and compatible TTS services</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
