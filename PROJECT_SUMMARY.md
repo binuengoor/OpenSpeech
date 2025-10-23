@@ -73,7 +73,8 @@ OpenSpeech/
 - ✅ Drag-and-drop upload zone
 - ✅ File listing with play/download/rename/delete
 - ✅ File renaming with extension preservation
-- ✅ Timestamp-based automatic file naming (YYYYMMDDHHMMSS-voice.ext)
+- ✅ Optional custom filename input (max 50 chars) for easier identification
+- ✅ Automatic timestamp-based naming (YYYYMMDDHHMMSS-customname-voice.ext or YYYYMMDDHHMMSS-voice.ext)
 - ✅ Generated files section with full management
 
 ### 4. **Advanced Voice Selection**

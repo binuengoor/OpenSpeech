@@ -22,7 +22,7 @@ A Dockerized Text-to-Speech Web Application that converts text into high-quality
 - **Document Upload & Text Extraction**: Upload TXT, HTML, DOCX, or PDF files to extract text
 - **Persistent File Storage**: Generated audio files are saved and can be played, downloaded, renamed, or deleted
 - **File Rename**: Rename output files directly from the web interface
-- **Timestamp-based Naming**: Files automatically named as `YYYYMMDDHHMMSS-voice.ext` for easy organization
+- **Flexible Filename Options**: Optional custom filename field (max 50 chars) or automatic timestamp-based naming `YYYYMMDDHHMMSS-voice.ext` for easy organization
 
 ### Advanced Features
 - **Multiple Audio Formats**: Support for MP3, Opus, AAC, and FLAC output formats
@@ -105,6 +105,7 @@ A Dockerized Text-to-Speech Web Application that converts text into high-quality
 1. **Upload or Enter Text**:
    - **Option A**: Drag and drop a document file (TXT, HTML, DOCX, PDF) onto the upload zone
    - **Option B**: Type or paste text directly into the text area
+   - **Optional**: Enter a custom filename (max 50 characters) to make files easier to identify
    - The app shows character count and estimated chunks for long text
 
 2. **Select Voice Options**:
@@ -125,7 +126,7 @@ A Dockerized Text-to-Speech Web Application that converts text into high-quality
    - Use the built-in audio player to listen
    - View all generated files in the "Generated Files" section
    - Play, download, rename, or delete files directly from the interface
-   - Files are automatically named with timestamp and voice name
+   - Files are named with timestamp prefix, optional custom name, and voice name
 
 ## Configuration
 

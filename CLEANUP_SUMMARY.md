@@ -129,7 +129,8 @@ Comprehensive cleanup and documentation update of the OpenSpeech TTS application
 - ✅ Document upload (TXT, HTML, DOCX, PDF)
 - ✅ Text extraction from documents
 - ✅ File listing with play/download/rename/delete
-- ✅ Timestamp-based filename generation (YYYYMMDDHHMMSS-voice.ext)
+- ✅ Optional custom filename input (max 50 chars) with automatic sanitization
+- ✅ Timestamp-based filename generation (YYYYMMDDHHMMSS-customname-voice.ext or YYYYMMDDHHMMSS-voice.ext)
 - ✅ Extension preservation on rename
 
 ### Voice Selection
