@@ -51,7 +51,7 @@ router.post('/voices/all', async (req, res) => {
 // Generate TTS audio
 router.post('/generate', async (req, res) => {
   try {
-    const { text, settings, voice, speed, format, combineAudio, model } = req.body;
+    const { text, settings, voice, speed, format, combineAudio, model, customFilename } = req.body;
 
     if (!text || !settings) {
       return res.status(400).json({ error: 'Missing required parameters' });
@@ -91,7 +91,10 @@ router.post('/generate', async (req, res) => {
       .replace(/[-:]/g, '')
       .replace('T', '-')
       .split('.')[0];
-    const filename = `${timestamp}-${voice}.${format || 'mp3'}`;
+    
+    // Use custom filename if provided, otherwise use voice name
+    const filenamePart = customFilename ? `${customFilename}-${voice}` : voice;
+    const filename = `${timestamp}-${filenamePart}.${format || 'mp3'}`;
     
     // If combining audio and there are multiple chunks
     let finalAudio;
@@ -210,7 +213,10 @@ router.post('/queue', async (req, res) => {
         .replace(/[-:]/g, '')
         .replace('T', '-')
         .split('.')[0];
-      const filename = `${timestamp}-${voice}.${format || 'mp3'}`;
+      
+      // Use custom filename if provided, otherwise use voice name
+      const filenamePart = job.customFilename ? `${job.customFilename}-${voice}` : voice;
+      const filename = `${timestamp}-${filenamePart}.${format || 'mp3'}`;
 
       // Save to output directory
       await fs.mkdir(OUTPUT_DIR, { recursive: true });
@@ -230,6 +236,7 @@ router.post('/queue', async (req, res) => {
       type: 'tts',
       text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
       voice,
+      customFilename,
       processor
     });
 

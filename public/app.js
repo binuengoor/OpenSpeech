@@ -51,6 +51,7 @@ const combineAudioCheckbox = document.getElementById('combineAudio');
 const textInput = document.getElementById('textInput');
 const charCount = document.getElementById('charCount');
 const chunkInfo = document.getElementById('chunkInfo');
+const customFilename = document.getElementById('customFilename');
 const dropZone = document.getElementById('dropZone');
 const fileUpload = document.getElementById('fileUpload');
 const generateBtn = document.getElementById('generateBtn');
@@ -747,6 +748,12 @@ async function generateSpeech() {
     progressText.textContent = 'Generating speech...';
 
     try {
+        // Get custom filename and sanitize it
+        const customName = customFilename.value.trim()
+            .replace(/[^a-zA-Z0-9-_\s]/g, '') // Remove special characters except dash, underscore, space
+            .replace(/\s+/g, '-') // Replace spaces with dashes
+            .substring(0, 50); // Ensure max length
+        
         // Start the request
         const requestPromise = fetch('/api/tts/generate', {
             method: 'POST',
@@ -758,7 +765,8 @@ async function generateSpeech() {
                 speed: parseFloat(speedSlider.value),
                 format: formatSelect.value,
                 combineAudio: combineAudioCheckbox.checked,
-                model: modelSelect.value
+                model: modelSelect.value,
+                customFilename: customName || null
             })
         });
         
